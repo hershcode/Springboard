@@ -26,14 +26,14 @@ exploring the data, and getting acquainted with the 3 tables. */
 
 /* Q1: Some of the facilities charge a fee to members, but some do not.
 Please list the names of the facilities that do. */
-SELECT * 
-FROM  `Facilities` 
+SELECT *
+FROM  `Facilities`
 WHERE membercost >0
 
 /* Q2: How many facilities do not charge a fee to members? */
-SELECT *, 
+SELECT *,
 	   COUNT(facid) AS no_charge_facilities_count
-FROM  `Facilities` 
+FROM  `Facilities`
 WHERE membercost = 0
 
 /* Q3: How can you produce a list of facilities that charge a fee to members,
@@ -69,22 +69,22 @@ SELECT firstname,
        surname,
        joindate
 FROM `Members`
-HAVING joindate = MAX(joindate)
+ORDER BY joindate DESC
 
 /* Q7: How can you produce a list of all members who have used a tennis court?
 Include in your output the name of the court, and the name of the member
 formatted as a single column. Ensure no duplicate data, and order by
 the member name. */
-SELECT m.firstname,
-       m.surname,
+SELECT DISTINCT(CONCAT(m.firstname,' ', m.surname)),
        f.name
 FROM `Bookings` b
-INNER JOIN `Facilities` f
+JOIN `Facilities` f
   ON b.facid = f.facid
-INNER JOIN `Members` m
+JOIN `Members` m
   ON b.memid = m.memid
-WHERE f.name Like '%Tennis Court%'
+WHERE f.name Like '%Tennis Court%' and b.memid = m.memid
 ORDER BY m.firstname
+
 
 /* Q8: How can you produce a list of bookings on the day of 2012-09-14 which
 will cost the member (or guest) more than $30? Remember that guests have
@@ -92,11 +92,54 @@ different costs to members (the listed costs are per half-hour 'slot'), and
 the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
+SELECT f.name,
+	   CONCAT(m.firstname,' ', m.surname) as full_name,
+	   CASE WHEN m.firstname LIKE '%guest' THEN f.guestcost * b.slots
+	   WHEN m.firstname NOT LIKE '%guest%' THEN f.membercost * b.slots
+	   END as total_cost
+FROM `Bookings` b
+JOIN `Facilities` f
+  ON b.facid = f.facid
+JOIN `Members` m
+  ON b.memid = m.memid
+WHERE b.starttime LIKE '%2012-09-14'
+AND
+((m.memid = 0 and (f.guestcost * b.slots) > 30) or(m.memid > 0 AND (f.membercost * b.slots) >30))
+ORDER BY total_cost DESC
 
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
+
+SELECT facility, full_name, total_cost
+
+FROM (
+				SELECT CONCAT(m.firstname,' ', m.surname) as full_name,
+ 							 CASE WHEN m.firstname LIKE '%guest' THEN f.guestcost * b.slots
+ 						 	 WHEN m.firstname NOT LIKE '%guest%' THEN f.membercost * b.slots
+ 						     END as total_cost,
+    						 f.name as facility
+							 FROM `Bookings` b
+							 JOIN `Facilities` f
+							   ON b.facid = f.facid
+							 JOIN `Members` m
+							   ON b.memid = m.memid
+							 WHERE b.starttime LIKE '%2012-09-14'
+) c
+WHERE total_cost > 30
+
+ORDER BY total_cost DESC
+
 
 
 /* Q10: Produce a list of facilities with a total revenue less than 1000.
 The output of facility name and total revenue, sorted by revenue. Remember
 that there's a different cost for guests and members! */
+SELECT f.name as facilities,
+			 SUM(b.slots *(CASE WHEN b.memid = 0 THEN f.guestcost
+				 						 ELSE f.membercost END)) AS total_revenue
+FROM `Bookings` b
+JOIN `Facilities` f
+ON b.facid = f.facid
+GROUP BY facilities
+HAVING total_revenue < 1000
+ORDER BY total_revenue DESC  
