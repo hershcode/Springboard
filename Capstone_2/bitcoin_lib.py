@@ -3,11 +3,14 @@ from dateutil.parser import parse
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sb
+from sklearn.preprocessing import StandardScaler
 
 def get_moving_averages():
     """This function computes the simple moving average and the exponential moving average
     """
-    days = [15, 30, 45, 60, 90, 200]
+    days = [15, 45, 90, 200]
     for day in days:
         data['sma{}_close'.format(day)] = data['close'].rolling(day).mean()
     for day in days:
@@ -15,7 +18,7 @@ def get_moving_averages():
 
 
 def get_future_close():
-    days = [5, 10, 20, 30]
+    days = [5, 10]
     for day in days:
         data['{}d_future_close'.format(day)] = data['close'].shift(-day)
     for day in days:
@@ -25,7 +28,7 @@ def get_future_close():
 
 
 def get_rsi():
-    windows = [15, 30, 45, 60, 90, 200]
+    windows = [15, 45, 90, 200]
     for window in windows:
         delta = data['close'].diff()
         up_days = delta.copy()
@@ -60,4 +63,62 @@ def load_bitcoin_data():
     get_rsi()
     get_future_close()
 
+    data.drop(labels=['open', 'low', 'high'], axis=1, inplace=True)
+
     return data
+
+
+####### Plotting functions
+def plot(df, columns, xlabel, ylabel, title):
+
+    sb.set()
+    plt.figure(figsize=(14,6))
+
+    for col in columns:
+        df[col].plot()
+
+
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend(columns)
+    plt.title(title)
+    plt.show()
+
+def correlation_heatmap(df):
+    corr = df.corr()
+    plt.figure(figsize=(20,14))
+    sb.heatmap(data=corr)
+    plt.title(label="Correlation Plot")
+    plt.show()
+
+def scatter_plot(df, x, y, xlabel, ylabel, title):
+    plt.figure(figsize=(14,6))
+    sb.scatterplot(x=x, y=y, data=df)
+    plt.xlabel(xlabel=xlabel)
+    plt.ylabel(ylabel=ylabel)
+    plt.title(label=title)
+    plt.show()
+
+def distribution(df, columns, title, subplots=False):
+    plt.figure(figsize=(14, 10))
+
+    if subplots == False:
+        df[columns].plot.density()
+        plt.title(label=title)
+        plt.show()
+
+    else:
+        for count, column in enumerate(columns):
+            index=count+1
+            plt.subplot(2, 2, index)
+            df[column].plot.density()
+            plt.title(label=title[count])
+        plt.show()
+
+def scale(df, columns):
+
+    scaler = StandardScaler().fit(df[columns].values)
+    features = scaler.transform(df[columns].values)
+    scaled_features = pd.DataFrame(features, columns=columns)
+
+    return scaled_features
