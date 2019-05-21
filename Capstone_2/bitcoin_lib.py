@@ -37,9 +37,10 @@ def get_rsi():
         data['rsi_{}d'.format(window)] = 100-100/(1+RS_up/RS_down)
 
 
-def load_bitcoin_data(filename, starting_date='2016-01-01'):
+def load_bitcoin_data():
     global data
     ### Load CSV file and transforming columns
+    filename = "coinbaseUSD_1-min_data_2014-12-01_to_2019-01-09.csv"
     data = pd.read_csv(filename)
     data.columns = map(str.lower, data.columns)
     data['timestamp'] = pd.to_datetime(data['timestamp'], unit='s')
@@ -51,7 +52,7 @@ def load_bitcoin_data(filename, starting_date='2016-01-01'):
     data = data.resample('D').mean()
 
     ### Getting subset of data
-    date = parse(starting_date)
+    date = parse('2016-01-01')
     data = data.loc[date:].copy()
 
     ### Getting technical indicators
